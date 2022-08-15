@@ -15,10 +15,22 @@ TODO
     -- player class x
     -- board space class x
     -- game board x
-    -- ability to move around gameboard
-    -- card deck
     -- game engine
-        -- setup
-    -- investments
+        -- setup X
+        -- move
+            -- get possible moves X
+            -- implement move actions
+            -- choose move
+            -- determine if another move is possible
+        -- fight
+        -- buy
+            -- implement card deck
+        -- invest
+
+    -- future work
+        -- implement finite amount of spice/harvesters
+
+    -- architecture ideas
+        -- giant state machine, like redux?
 
 */

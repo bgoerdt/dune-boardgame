@@ -1,3 +1,19 @@
+public class PossibleMove : IEquatable<PossibleMove>
+{
+    public Character Character { get; set; }
+    public BoardSpace BoardSpace { get; set; }
+    public bool UsesBothDie { get; set; }
+    public int DieValue { get; set; }
+
+    public bool Equals(PossibleMove? other)
+    {
+        return Character == other?.Character &&
+            BoardSpace == other?.BoardSpace &&
+            UsesBothDie == other?.UsesBothDie &&
+            DieValue == other?.DieValue;
+    }
+}
+
 public class GameBoard {
     public List<BoardSpace> BoardSpaces {get;set;}
     public BoardSpace RedSietch;
@@ -5,31 +21,37 @@ public class GameBoard {
     public BoardSpace BlueSietch;
     public BoardSpace GreenSietch;
 
-    public List<(Character, BoardSpace)> GetPossibleMoves(List<Character> characters, (int, int) diceRoll)
+    public List<PossibleMove> GetPossibleMoves(List<Character> characters, (int, int) diceRoll)
     {
-        var possibleMoves = new List<(Character, BoardSpace)>();
+        var possibleMoves = new List<PossibleMove>();
 
         foreach (var character in characters)
         {
-            var moves = new List<BoardSpace>();
+            possibleMoves.AddRange(
+                GetPossibleMoves(character.CurrentBoardSpace, diceRoll.Item1)
+                .Select(move => new PossibleMove { Character = character, BoardSpace = move, DieValue = diceRoll.Item1, UsesBothDie = false}));
 
-            GetPossibleMoves(character.CurrentBoardSpace, diceRoll.Item1, moves);
-            GetPossibleMoves(character.CurrentBoardSpace, diceRoll.Item2, moves);
-            GetPossibleMoves(character.CurrentBoardSpace, diceRoll.Item1 + diceRoll.Item2, moves);
+            possibleMoves.AddRange(
+                GetPossibleMoves(character.CurrentBoardSpace, diceRoll.Item2)
+                .Select(move => new PossibleMove { Character = character, BoardSpace = move, DieValue = diceRoll.Item2, UsesBothDie = false }));
 
-            possibleMoves.AddRange(moves.Select(move => (character, move)));
+            possibleMoves.AddRange(
+                GetPossibleMoves(character.CurrentBoardSpace, diceRoll.Item1 + diceRoll.Item2)
+                .Select(move => new PossibleMove { Character = character, BoardSpace = move, DieValue = diceRoll.Item1 + diceRoll.Item2, UsesBothDie = true }));
         }
 
         return possibleMoves.Distinct().ToList();
     }
 
-    private void GetPossibleMoves(BoardSpace currentBoardSpace, int spacesLeftToMove, List<BoardSpace> accumulatedPossibleMoves, BoardSpace? previousBoardSpace = null)
+    private List<BoardSpace> GetPossibleMoves(BoardSpace currentBoardSpace, int spacesLeftToMove, List<BoardSpace>? accumulatedPossibleMoves = null, BoardSpace? previousBoardSpace = null)
     {
+        accumulatedPossibleMoves ??= new List<BoardSpace>();
+
         if (spacesLeftToMove == 0)
         {
             accumulatedPossibleMoves.Add(currentBoardSpace);
 
-            return;
+            return accumulatedPossibleMoves;
         }
 
         if (currentBoardSpace.AltNext != null && previousBoardSpace != currentBoardSpace.AltNext)
@@ -39,7 +61,7 @@ public class GameBoard {
 
         GetPossibleMoves(currentBoardSpace.Next, spacesLeftToMove - 1, accumulatedPossibleMoves, currentBoardSpace);
 
-        return;
+        return accumulatedPossibleMoves;
     }
 
     public static GameBoard Setup() {
