@@ -1,4 +1,3 @@
-
 public class GameEngine {
     public GameBoard GameBoard;
     public List<Player> Players;
@@ -19,6 +18,7 @@ public class GameEngine {
         {
             Console.WriteLine($"Current player is {currentPlayer.Name}");
 
+            // MOVE
             var rollResult = RollToMove();
 
             Console.WriteLine($"Roll: {rollResult.Item1}, {rollResult.Item2}");
@@ -55,6 +55,7 @@ public class GameEngine {
 
                 var secondMove = possibleSecondMoves[random.Next(0, possibleSecondMoves.Count)];
 
+                Console.WriteLine($"{secondMove.Character.Name} moves {secondMove.DieValue} spaces to {secondMove.BoardSpace.Name}.");
                 MoveCharacter(currentPlayer, secondMove.Character, secondMove.BoardSpace);
             }
 
@@ -62,6 +63,18 @@ public class GameEngine {
             {
                 break;
             }
+
+            // FIGHT
+
+            // BUY
+            var harvestersToBuy = Math.Min(random.Next(0, 4), currentPlayer.Spice);
+
+            currentPlayer.Harvesters += harvestersToBuy;
+            currentPlayer.Spice -= harvestersToBuy;
+
+            Console.WriteLine($"Bought {harvestersToBuy} harvesters. Now has {currentPlayer.Harvesters} harvesters and {currentPlayer.Spice} spice");
+
+            // INVEST
 
             currentPlayer = GetNextPlayer(currentPlayer);
         }
@@ -113,11 +126,79 @@ public class GameEngine {
 
             Console.WriteLine($"Gained {player.Harvesters} Spice, now has {player.Spice} Spice");
         }
+        if (boardSpace.Name.StartsWith("Spice Raid"))
+        {
+            var random = new Random();
+
+            // TODO: implement choose opponent
+            var playerToRaid = GetRandomActiveOtherPlayer(player);
+
+            var opponentRoll = random.Next(1, 7);
+            var raidRoll = random.Next(1, 9);
+
+            Console.WriteLine($"{playerToRaid.Name} is being raided and rolls {opponentRoll}. {player.Name} rolls {raidRoll}.");
+
+            var spiceGained = raidRoll - opponentRoll;
+
+            if (spiceGained > 0)
+            {
+                var spiceRaided = Math.Min(spiceGained, playerToRaid.Spice);
+                player.Spice += spiceRaided;
+                playerToRaid.Spice -= spiceRaided;
+                Console.WriteLine($"{spiceRaided} Spice raided. {player.Name} now has {player.Spice} Spice. {playerToRaid.Name} now has {playerToRaid.Spice}.");
+            }
+            else
+            {
+                Console.WriteLine("Spice raid unsuccessful");
+            }
+        }
+        else if (boardSpace.Name.StartsWith("Poison"))
+        {
+            var charactersToPoison = GetCharactersForAttack(player);
+            var random = new Random();
+            var randomCharacterToPoison = charactersToPoison[random.Next(0, charactersToPoison.Count)];
+
+            Console.WriteLine($"{player.Name} is a attempting to poison {randomCharacterToPoison.Name}");
+
+            var roll = random.Next(1, 7);
+
+            Console.WriteLine($"Rolled {roll} against {randomCharacterToPoison.Name}'s Guile of {randomCharacterToPoison.Guile}.");
+            if (roll > randomCharacterToPoison.Guile)
+            {
+                var damageRoll = random.Next(1, 7);
+
+                var damage = Math.Min(damageRoll, randomCharacterToPoison.Strength);
+
+                randomCharacterToPoison.Strength -= damage;
+
+                Console.WriteLine($"Poison attempt succeeds. Rolled {damageRoll} for damage. {randomCharacterToPoison.Name}'s Strength is now {randomCharacterToPoison.Strength}");
+
+                if (randomCharacterToPoison.Strength == 0)
+                {
+                    KillCharacter(randomCharacterToPoison);
+                    Console.WriteLine($"{randomCharacterToPoison.Name} is dead.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Poison attempt fails.");
+            }
+        }
         else if (boardSpace.Name.StartsWith("Training"))
         {
             character.Strength++;
 
             Console.WriteLine($"{character.Name} gained 1 Strength, now has {character.Strength} Strength");
+        }
+        else if (boardSpace.Name == "Space Guild")
+        {
+            var random = new Random();
+
+            var randomBoardSpace = GameBoard.BoardSpaces[random.Next(0, GameBoard.BoardSpaces.Count)];
+
+            Console.WriteLine($"Using Space Guild to move to {randomBoardSpace.Name}");
+
+            MoveCharacter(player, character, randomBoardSpace);
         }
         else if (boardSpace.Name == "Smuggler")
         {
@@ -130,7 +211,7 @@ public class GameEngine {
         }
         else if (boardSpace.Name.StartsWith("Duel"))
         {
-            var charactersToDuel = GetCharactersToDuel(player);
+            var charactersToDuel = GetCharactersForAttack(player);
 
             if (charactersToDuel.Count == 0)
             {
@@ -225,7 +306,7 @@ public class GameEngine {
         }
     }
 
-    public List<Character> GetCharactersToDuel(Player attackingPlayer)
+    public List<Character> GetCharactersForAttack(Player attackingPlayer)
     {
         return Players.Where(player => player != attackingPlayer)
             .SelectMany(player => player.Characters)
@@ -239,5 +320,14 @@ public class GameEngine {
             .SelectMany(player => player.Characters)
             .Where(character => character.CurrentBoardSpace.Type == BoardSpaceType.DESERT)
             .ToList();
+    }
+
+    public Player GetRandomActiveOtherPlayer(Player thisPlayer)
+    {
+        var activePlayers = Players.Where(player => thisPlayer != player && player.Characters.Count > 0).ToList();
+
+        var random = new Random();
+
+        return activePlayers[random.Next(0, activePlayers.Count)];
     }
 }

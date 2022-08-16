@@ -18,10 +18,15 @@ TODO
     -- game engine
         -- setup X
         -- move
-            -- get possible moves X
+            -- get possible moves x
             -- implement move actions
-            -- choose move
-            -- determine if another move is possible
+                -- spice raid X
+                -- poison X
+                -- space guild X
+                -- traitor 
+                -- bene gesserit 
+            -- choose move (random for now) x
+            -- determine if another move is possible x
         -- fight
         -- buy
             -- implement card deck
