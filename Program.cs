@@ -28,9 +28,19 @@ TODO
             -- choose move (random for now) x
             -- determine if another move is possible x
         -- fight
+        -- play kanly card
         -- buy
-            -- implement card deck
+            -- implement card deck X
+            -- buy harvesters X
+            -- buy cards X
+            -- assign equipment cards X
         -- invest
+
+    -- implement kanly card actions
+        --
+
+    -- implement equipment card actions
+        
 
     -- future work
         -- implement finite amount of spice/harvesters

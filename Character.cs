@@ -1,9 +1,15 @@
 public class Character {
+    public Character()
+    {
+        EquipmentCards = new List<Card>();
+    }
+
     public string Name {get;set;}
     public Team Team {get;set;}
     public int Strength {get;set; }
     public int InitialStrength { get; set; }
     public int Guile {get;set;}
+    public List<Card> EquipmentCards { get; set; }
     public BoardSpace CurrentBoardSpace {get;set;}
 
     public bool IsInSietch =>

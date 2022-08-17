@@ -1,11 +1,13 @@
 public class GameEngine {
     public GameBoard GameBoard;
     public List<Player> Players;
+    public CardDeck CardDeck;
 
     public GameEngine()
     {
         GameBoard = GameBoard.Setup();
         Players = Player.Setup(GameBoard.RedSietch, GameBoard.YellowSietch, GameBoard.BlueSietch, GameBoard.GreenSietch);
+        CardDeck = new CardDeck();
     }
 
     public void Play()
@@ -74,12 +76,54 @@ public class GameEngine {
 
             Console.WriteLine($"Bought {harvestersToBuy} harvesters. Now has {currentPlayer.Harvesters} harvesters and {currentPlayer.Spice} spice");
 
+            var cardsToBuy = Math.Min(Math.Min(random.Next(0, 4), currentPlayer.Spice), CardDeck.CardCount);
+
+            currentPlayer.Spice -= cardsToBuy;
+
+            var drawnCards = CardDeck.Draw(cardsToBuy);
+
+            Console.WriteLine($"Bought {cardsToBuy} cards. Now has {currentPlayer.Spice} spice. Cards drawn: {string.Join(", ", drawnCards.Select(c => c.Name))}");
+
+            var equipmentCards = drawnCards.Where(c => c.Type == CardType.EQUIPMENT).ToList();
+            var unassignedCards = drawnCards.Where(c => c.Type == CardType.KANLY).ToList();
+
+            if (equipmentCards.Count > 0)
+            {
+                foreach (var equipmentCard in equipmentCards)
+                {
+                    if (!TryAssignEquipmentCard(currentPlayer.Characters, equipmentCard))
+                    {
+                        unassignedCards.Add(equipmentCard);
+                    }
+                }
+            }
+
+            currentPlayer.Cards.AddRange(unassignedCards);
+
             // INVEST
 
             currentPlayer = GetNextPlayer(currentPlayer);
         }
 
         Console.WriteLine("Game Over");
+    }
+
+    public bool TryAssignEquipmentCard(List<Character> characters, Card equipmentCard)
+    {
+        foreach (var character in characters)
+        {
+            if (character.EquipmentCards.Any(card => card.Name == equipmentCard.Name))
+            {
+                return false;
+            }
+
+            character.EquipmentCards.Add(equipmentCard);
+            Console.WriteLine($"{equipmentCard.Name} assigned to {character.Name}");
+            return true;
+        }
+
+        Console.WriteLine($"{equipmentCard.Name} could not be assigned");
+        return false;
     }
 
     public Player GetNextPlayer(Player currentPlayer)
