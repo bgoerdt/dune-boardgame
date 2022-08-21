@@ -23,13 +23,14 @@ TODO
                 -- spice raid X
                 -- poison X
                 -- space guild X
-                -- traitor 
-                -- bene gesserit 
+                -- sietch X
+                -- traitor X
+                -- bene gesserit X
             -- choose move (random for now) x
             -- determine if another move is possible x
         -- fight
-        -- play kanly card
-        -- buy
+        -- play kanly card X
+        -- buy X
             -- implement card deck X
             -- buy harvesters X
             -- buy cards X
@@ -37,7 +38,9 @@ TODO
         -- invest
 
     -- implement kanly card actions
-        --
+        -- Hunter Seeker X
+        -- Harvester Raid X
+        -- Secret Silo X
 
     -- implement equipment card actions
         

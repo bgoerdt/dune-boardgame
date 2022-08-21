@@ -1,3 +1,5 @@
+using System;
+
 public class GameEngine {
     public GameBoard GameBoard;
     public List<Player> Players;
@@ -68,6 +70,23 @@ public class GameEngine {
 
             // FIGHT
 
+            // PLAY KANLY CARDS
+            var shouldPlayKanlyCard = currentPlayer.Cards.Count(c => c.Type == CardType.KANLY) > 0 && random.Next(0, 2) == 1;
+
+            if (shouldPlayKanlyCard)
+            {
+                var kanlyCardToPlay = currentPlayer.Cards.First(c => c.Type == CardType.KANLY);
+
+                PlayKanlyCard(kanlyCardToPlay, currentPlayer);
+
+                currentPlayer.Cards.Remove(kanlyCardToPlay);
+
+                if (IsWinner())
+                {
+                    break;
+                }
+            }
+
             // BUY
             var harvestersToBuy = Math.Min(random.Next(0, 4), currentPlayer.Spice);
 
@@ -106,6 +125,79 @@ public class GameEngine {
         }
 
         Console.WriteLine("Game Over");
+    }
+
+    public void PlayKanlyCard(Card card, Player currentPlayer)
+    {
+        Console.WriteLine($"{currentPlayer.Name} plays {card.Name} Kanly card");
+
+        if (card.Name == "Harvester Raid")
+        {
+            var playerToRaid = Players.FirstOrDefault(p => p != currentPlayer && p.Characters.Count > 0 && p.Harvesters > 0);
+
+            if (playerToRaid == null)
+            {
+                Console.WriteLine("No players to raid");
+                return;
+            }
+
+            var random = new Random();
+
+            var raidRoll = random.Next(1, 9);
+            var defenseRoll = random.Next(1, 7);
+
+            var harvestersRaided = Math.Min(Math.Max(0, raidRoll - defenseRoll), playerToRaid.Harvesters);
+
+            currentPlayer.Harvesters += harvestersRaided;
+            playerToRaid.Harvesters -= harvestersRaided;
+
+            Console.WriteLine($"{playerToRaid.Name}'s harvesters raided. {playerToRaid.Name} rolls {defenseRoll}, {currentPlayer.Name} rolls {raidRoll}. {currentPlayer.Name} gains {harvestersRaided} harvesters. {currentPlayer.Name} now has {currentPlayer.Harvesters}, {playerToRaid.Name} has {playerToRaid.Harvesters}");
+        }
+        else if (card.Name == "Secret Silo")
+        {
+            var random = new Random();
+
+            var roll = random.Next(1, 7);
+
+            currentPlayer.Spice += roll;
+
+            Console.WriteLine($"Gains {roll} Spice, now has {currentPlayer.Spice}");
+        }
+        else if (card.Name == "Hunter-Seeker")
+        {
+            var random = new Random();
+
+            var characters = GetCharactersForAttack(currentPlayer);
+
+            var characterToAttack = characters[random.Next(0, characters.Count)];
+
+            var roll = random.Next(1, 7);
+
+            Console.WriteLine($"{characterToAttack.Name} is attacked. {currentPlayer.Name} rolls {roll} against {characterToAttack.Name}'s Guile of {characterToAttack.Guile}.");
+
+            if (roll > characterToAttack.Guile)
+            {
+                Console.WriteLine($"{characterToAttack.Name} is killed.");
+
+                if (characterToAttack.EquipmentCards.Count > 1)
+                {
+                    var equipmentCardToTake = characterToAttack.EquipmentCards[random.Next(0, characterToAttack.EquipmentCards.Count)];
+
+                    characterToAttack.EquipmentCards.Remove(equipmentCardToTake);
+
+                    if (!TryAssignEquipmentCard(currentPlayer.Characters, equipmentCardToTake))
+                    {
+                        currentPlayer.Cards.Add(equipmentCardToTake);
+                    }
+                }
+
+                KillCharacter(characterToAttack);
+            }
+            else
+            {
+                Console.WriteLine($"{characterToAttack.Name} survives.");
+            }
+        }
     }
 
     public bool TryAssignEquipmentCard(List<Character> characters, Card equipmentCard)
@@ -170,7 +262,7 @@ public class GameEngine {
 
             Console.WriteLine($"Gained {player.Harvesters} Spice, now has {player.Spice} Spice");
         }
-        if (boardSpace.Name.StartsWith("Spice Raid"))
+        else if (boardSpace.Name.StartsWith("Spice Raid"))
         {
             var random = new Random();
 
@@ -199,6 +291,13 @@ public class GameEngine {
         else if (boardSpace.Name.StartsWith("Poison"))
         {
             var charactersToPoison = GetCharactersForAttack(player);
+
+            if (charactersToPoison.Count == 0)
+            {
+                Console.WriteLine("There are not characters that can be poisoned at this time");
+                return;
+            }
+
             var random = new Random();
             var randomCharacterToPoison = charactersToPoison[random.Next(0, charactersToPoison.Count)];
 
@@ -310,6 +409,86 @@ public class GameEngine {
                 {
                     Console.WriteLine($"{characterToAttack.Name} is attacked by a Sand Storm");
                     ExecuteDesertAttack(characterToAttack);
+                }
+            }
+        }
+        else if (boardSpace.Name.Contains("Sietch"))
+        {
+            if (character.IsInSietch && character.Strength < character.InitialStrength)
+            {
+                character.Strength = character.InitialStrength;
+
+                Console.WriteLine($"{character.Name}'s strength is restored to {character.InitialStrength}");
+            }
+        }
+        else if (boardSpace.Name == "Traitor")
+        {
+            var playerToStealFrom = Players.FirstOrDefault(p => p.Cards.Count > 0);
+
+            if (playerToStealFrom == null)
+            {
+                Console.WriteLine("There are not players with cards to steal.");
+            }
+            else
+            {
+                var random = new Random();
+                var roll = random.Next(1, 7);
+                var numberOfCardsToSteal = Math.Min(roll, playerToStealFrom.Cards.Count);
+
+                Console.WriteLine($"{player.Name} rolled a {roll} and will steal {numberOfCardsToSteal} cards from {playerToStealFrom}");
+
+                for (var index = 0; index < numberOfCardsToSteal; index++)
+                {
+                    var cardToSteal = playerToStealFrom.Cards[random.Next(0, playerToStealFrom.Cards.Count)];
+
+                    playerToStealFrom.Cards.Remove(cardToSteal);
+
+                    Console.WriteLine($"{player.Name} stole {cardToSteal.Name} from {playerToStealFrom.Name}");
+
+                    if (cardToSteal.Type == CardType.KANLY || !TryAssignEquipmentCard(player.Characters, cardToSteal))
+                    {
+                        player.Cards.Add(cardToSteal);
+                    }
+                }
+            }
+        }
+        else if (boardSpace.Name == "Bene Gesserit")
+        {
+            var characterToStealFrom = Players.SelectMany(p => p.Characters).FirstOrDefault(c => c.EquipmentCards.Count > 0);
+
+            if (characterToStealFrom != null)
+            {
+                var cardToSteal = characterToStealFrom.EquipmentCards.First();
+
+                characterToStealFrom.EquipmentCards.Remove(cardToSteal);
+
+                Console.WriteLine($"{player.Name} steals {cardToSteal.Name} from {characterToStealFrom.Name}");
+
+                if (!TryAssignEquipmentCard(player.Characters, cardToSteal))
+                {
+                    player.Cards.Add(cardToSteal);
+                }
+            }
+            else
+            {
+                var playerToStealFrom = Players.FirstOrDefault(p => p.Cards.Count > 0);
+
+                if (playerToStealFrom == null)
+                {
+                    Console.WriteLine("There are no cards available to steal");
+                }
+
+                var random = new Random();
+
+                var cardToSteal = playerToStealFrom.Cards[random.Next(0, playerToStealFrom.Cards.Count)];
+
+                playerToStealFrom.Cards.Remove(cardToSteal);
+
+                Console.WriteLine($"{player.Name} stole {cardToSteal.Name} from {playerToStealFrom.Name}");
+
+                if (cardToSteal.Type == CardType.KANLY || !TryAssignEquipmentCard(player.Characters, cardToSteal))
+                {
+                    player.Cards.Add(cardToSteal);
                 }
             }
         }
